@@ -1,0 +1,1 @@
+ /home/mwacharo/Desktop/Projects/bringit_rider/build/2a486144554704c26189f959d60736fc/dart_build_result.json:  /home/mwacharo/Desktop/Projects/bringit_rider/.dart_tool/package_config.json /home/mwacharo/Desktop/Projects/bringit_rider/pubspec.yaml /home/mwacharo/development/bin/cache/dart-sdk/version
