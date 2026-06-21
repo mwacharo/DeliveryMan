@@ -11,4 +11,6 @@ class ApiConstants {
   static const String orders        = '/v1/orders';
   static const String stkPush       = '/v1/payments/mpesa/stk-push';
   static const String whatsapp      = '/v1/whatsapp/send-message';
+  // add available-statuses endpoint
+  static const String availableStatuses = '/v1/rider/available-statuses';
 }

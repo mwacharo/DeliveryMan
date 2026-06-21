@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../models/order_model.dart';
+// import '../models/status_option_model.dart';
+import '../models/status_option_model.dart';
 import '../services/order_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -27,9 +29,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String _paymentStatus = 'idle';
   String? _mpesaCode;
 
+
+    List<StatusOption> _availableStatuses = [];
+  bool _loadingStatuses = false;
+
   @override
   void initState() {
     super.initState();
+        _loadAvailableStatuses();
+
     _order = widget.order;
     // If order already has a payment, reflect it
     if (_order.latestPayment != null) {
@@ -41,6 +49,62 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     }
   }
+
+
+  IconData _statusIcon(String name) {
+  switch (name.toLowerCase()) {
+    case 'delivered':
+      return Icons.check_circle_outline;
+    case 'undispatched':
+      return Icons.cancel_outlined;
+    case 'rescheduled':
+      return Icons.schedule_outlined;
+    case 'awaiting return':
+      return Icons.keyboard_return;
+    case 'in transit':
+      return Icons.local_shipping_outlined;
+    case 'paid':
+      return Icons.payments_outlined;
+    default:
+      return Icons.radio_button_checked;
+  }
+}
+
+
+Color _statusColor(String color) {
+  switch (color.toLowerCase()) {
+    case 'green':
+      return Colors.green;
+    case 'red':
+      return Colors.red;
+    case 'orange':
+      return Colors.orange;
+    case 'blue':
+      return Colors.blue;
+    case 'gray':
+      return Colors.grey;
+    default:
+      return AppTheme.primary;
+  }
+}
+
+Future<void> _loadAvailableStatuses() async {
+  try {
+    setState(() => _loadingStatuses = true);
+
+    final result = await OrderService.availableStatuses();
+
+    setState(() {
+      _availableStatuses = result;
+    });
+  } catch (e) {
+    debugPrint('Failed to load statuses: $e');
+  } finally {
+    if (mounted) {
+      setState(() => _loadingStatuses = false);
+    }
+  }
+}
 
   // ── Communication ────────────────────────────────────────────────
 
@@ -214,52 +278,71 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  // ── Status update ─────────────────────────────────────────────────
+
+
 
   void _showStatusSheet() {
-    final statuses = [
-      // _SO('Dispatched', Icons.local_shipping_outlined,
-      //     AppTheme.statusDispatched, 'Order picked up and in transit'),
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) {
+      return SafeArea(
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: _availableStatuses.length,
+          itemBuilder: (_, index) {
+            final status = _availableStatuses[index];
 
-      // awaiting return 
+            return ListTile(
+              leading: Icon(
+                _statusIcon(status.name),
+                color: _statusColor(status.color),
+              ),
+              title: Text(status.name),
+              subtitle: Text(status.description ?? ''),
+              onTap: () {
+                Navigator.pop(context);
 
-          _SO('Awaiting Return', Icons.local_shipping_outlined,
-          AppTheme.statusAwaitingReturn, 'Return intiated'),
+                _updateStatus(
+                  status.id,
+                  status.name,
+                );
+              },
+            );
+          },
+        ),
+      );
+    },
+  );
+}
 
-      _SO('Undispatched', Icons.cancel_outlined,
-          AppTheme.statusUndispatched, 'client not available-add a note'),
-      _SO('Rescheduled', Icons.schedule_outlined,
-          AppTheme.statusRescheduled, 'Postponed — add a note'),
-      _SO('Delivered', Icons.check_circle_outline,
-          AppTheme.statusDelivered, 'Mobile payment confirmed'),
-      _SO('Pending Cash Submission', Icons.payments_outlined,
-          AppTheme.statusPendingCash, 'Cash collected, submit to company'),
-    ];
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-        child: Column(mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-          _sheetHandle(),
-          const SizedBox(height: 20),
-          const Text('Update Order Status',
-              style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          ...statuses.map((s) => _statusTile(s, ctx)),
-        ]),
-      ),
+// define updateStatus method 
+
+
+Future<void> _updateStatus(int statusId, String statusName) async {
+  try {
+    final ok = await OrderService.updateStatus(
+      widget.order.id,
+      statusId,
+    );
+
+    if (ok) {
+      widget.onStatusChanged();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Status updated to $statusName')),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
     );
   }
+}
+
+
+
 
   Widget _statusTile(_SO s, BuildContext sheetCtx) {
     final isCurrent =
@@ -272,7 +355,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               if (s.label == 'Rescheduled') {
                 _showRescheduleSheet();
               } else {
-                _applyStatus(s.label);
+                  // _applyStatus(s.label);
+                  _updateStatus(s.id, s.label);
               }
             },
       borderRadius: BorderRadius.circular(10),
@@ -365,9 +449,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           return;
                         }
                         setSheet(() => loading = true);
-                        final ok = await OrderService.updateStatus(
-                            _order.id, 'rescheduled',
-                            notes: notesCtrl.text.trim());
+                      
+                        // final rescheduledStatus = availableStatuses.firstWhere(
+//   (s) => s.label == 'Rescheduled',
+// );
+
+final rescheduledStatus = _availableStatuses.firstWhere(
+  (s) => s.name.toLowerCase() == 'rescheduled',
+);
+
+final ok = await OrderService.updateStatus(
+  _order.id,
+  rescheduledStatus.id,
+  notes: notesCtrl.text.trim(),
+);
                         setSheet(() => loading = false);
                         if (ok) {
                           Navigator.pop(ctx);
@@ -393,15 +488,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Future<void> _applyStatus(String status) async {
-    final ok = await OrderService.updateStatus(_order.id, status);
-    if (ok) {
-      _showSnack('Status updated to $status', success: true);
-      widget.onStatusChanged();
-    } else {
-      _showSnack('Update failed', success: false);
-    }
-  }
+
+
+
+
+
+
+
+
+  
 
   // ── Release code ──────────────────────────────────────────────────
 
@@ -458,7 +553,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               onPressed: () async {
                 if (codeCtrl.text.trim().isEmpty) return;
                 Navigator.pop(ctx);
-                await _applyStatus('Delivered');
+                await _updateStatus(5, 'Delivered'); // Assuming 5 is the ID for 'Delivered' status
               },
               child: const Text('Confirm Delivery',
                   style: TextStyle(
@@ -1069,10 +1164,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ]);
 }
 
+
+
+
 class _SO {
+  final int id;
   final String label;
   final IconData icon;
   final Color color;
   final String desc;
-  _SO(this.label, this.icon, this.color, this.desc);
+
+  _SO(
+    this.id,
+    this.label,
+    this.icon,
+    this.color,
+    this.desc,
+  );
 }

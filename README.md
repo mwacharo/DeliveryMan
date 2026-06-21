@@ -73,19 +73,16 @@ lib/
     └── profile/       ← Profile + logout
 ```
 
-## API Endpoints Used
-
-| Action        | Method        | Endpoint         |
-| ------------- | ------------- | ---------------- | ---------------------- | --- |
-| Login         | POST          | /v1/rider/login  |
-| Logout        | POST          | /v1/rider/logout |
-| Get Orders    | GET           | /v1/orders       |
-| <!--          | Update Status | PATCH            | /v1/orders/{id}/status | --> |
-| Update Status | PUT           | /v1/orders/{id}  |
-
-| STK Push | POST | /payments/mpesa/stk-push |
-| Manual Mpesa | POST | /v1/orders/{id}/verify-mpesa |
-| Rider Status | PATCH | /v1/rider/status |
+| Action              | Method | Endpoint                       | Description                 |
+| ------------------- | ------ | ------------------------------ | --------------------------- |
+| Login               | POST   | `/v1/rider/login`              | Rider authentication        |
+| Logout              | POST   | `/v1/rider/logout`             | End session                 |
+| Get Orders          | GET    | `/v1/orders`                   | Fetch assigned orders       |
+| Update Order Status | PUT    | `/v1/orders/{id}`              | Update full order state     |
+| STK Push            | POST   | `/payments/mpesa/stk-push`     | Initiate M-Pesa payment     |
+| Verify M-Pesa       | POST   | `/v1/orders/{id}/verify-mpesa` | Manual payment verification |
+| Rider Status        | PATCH  | `/v1/rider/status`             | Online/offline status       |
+| Available Statuses  | GET    | `/v1/available-statuses`       | Role-based status list      |
 
 ## Features Implemented
 

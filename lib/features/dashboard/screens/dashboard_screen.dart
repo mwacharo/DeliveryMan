@@ -9,6 +9,8 @@ import '../../orders/models/order_model.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../../notifications/screens/notifications_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+// import '../../orders/models/status_option.dart';
+import '../../orders/models/status_option_model.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,7 +31,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _loadRider();
     _loadOrders();
+    _loadStatuses();
+
+
   }
+
+
+  List<StatusOption> _statuses = [];
+
+Future<void> _loadStatuses() async {
+  try {
+    final statuses = await OrderService.availableStatuses();
+
+    setState(() {
+      _statuses = statuses;
+    });
+  } catch (e) {
+    debugPrint('Failed to load statuses: $e');
+  }
+}
 
   Future<void> _loadRider() async {
     final name = await AuthService.getRiderName();

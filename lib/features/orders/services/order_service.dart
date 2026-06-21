@@ -2,6 +2,8 @@ import 'dart:convert';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../models/order_model.dart';
+import '../models/status_option_model.dart';
+
 
 class OrderService {
   static Future<List<OrderModel>> getOrders() async {
@@ -24,28 +26,29 @@ class OrderService {
     throw Exception('Failed to load order');
   }
 
-  // static Future<bool> updateStatus(int id, String status,
-  //     {String? notes}) async {
-  //   final response = await ApiService.patch(
-  //     '${ApiConstants.orders}/$id/status',
-  //     {'status': status, if (notes != null) 'notes': notes},
-  //   );
-  //   return response.statusCode == 200;
-  // }
+ 
 
 
-  static Future<bool> updateStatus(int id, String status,
-    {String? notes}) async {
 
-  final response = await ApiService.put(
-    '${ApiConstants.orders}/$id',
-    {
-      'status': status,
-      if (notes != null) 'notes': notes,
-    },
-  );
 
-  return response.statusCode == 200;
+static Future<bool> updateStatus(
+  int id,
+  int statusId, {
+  String? notes,
+}) async {
+  try {
+    final response = await ApiService.put(
+      '${ApiConstants.orders}/$id',
+      {
+        'status_id': statusId,
+        if (notes != null) 'notes': notes,
+      },
+    );
+
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
 }
 
   static Future<Map<String, dynamic>> triggerStkPush({
@@ -81,4 +84,23 @@ class OrderService {
       'message': data['message'] ?? '',
     };
   }
+
+
+static Future<List<StatusOption>> availableStatuses() async {
+  try {
+    final response = await ApiService.get('/v1/available-statuses');
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      return (data['data'] as List)
+          .map((e) => StatusOption.fromJson(e))
+          .toList();
+    }
+
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
 }
